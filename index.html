@@ -114,7 +114,9 @@ document.getElementById('form').addEventListener('submit',async(e)=>{
   e.preventDefault();
   const err=document.getElementById('err');err.textContent='';
   const name=document.getElementById('name').value.trim();
-  const phone=document.getElementById('phone').value.trim();
+  let phone=document.getElementById('phone').value.trim();
+  const digits=phone.replace(/\D/g,'');
+  if(/^09\d{8}$/.test(digits)){phone=digits.slice(0,4)+'-'+digits.slice(4,7)+'-'+digits.slice(7);}
   const email=document.getElementById('email').value.trim();
   const size=document.getElementById('size').value;
   const diet=document.querySelector('input[name=diet]:checked').value;
