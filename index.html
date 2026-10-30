@@ -64,6 +64,10 @@ input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #8b7cc0
 <label><input type="radio" name="diet" value="葷食" checked> 葷食</label>
 <label><input type="radio" name="diet" value="素食"> 素食</label>
 </div>
+<label>組別 *
+<select id="group" required>
+<option value="">請選擇組別</option><option>主席</option><option>執行長</option><option>副執行長</option><option>接待組</option><option>節目組</option><option>競賽組</option><option>場地組</option><option>設備組</option><option>環保組</option><option>交通組</option><option>活動組</option><option>醫療組</option><option>財務組</option><option>餐飲組</option><option>顧問</option><option>副主席</option><option>其他</option>
+</select></label>
 <button type="submit" id="submitBtn">✨ 送出登記，看看我的星座鼓勵</button>
 <button type="button" class="secondary" onclick="backToGender()">← 回上一步重選性別</button>
 <p class="err" id="err"></p>
@@ -95,6 +99,25 @@ const ZODIAC=[
  {name:'水瓶座',from:[1,20],to:[2,18],good:'創意靈活、獨立思考、樂於助人',msg:'你的創意總能帶來新點子，遇到突發狀況你也能想出好辦法，團隊有你真幸運！'},
  {name:'雙魚座',from:[2,19],to:[3,20],good:'同理心強、溫柔包容、直覺細膩',msg:'你能感受到別人的心情，這份溫柔會讓每一位參加者都覺得被好好對待，謝謝你！'}
 ];
+const GROUP_PRAISE={
+'主席':'你的決策與定力，能讓全場安心跟著方向走，是大家最信任的領航者！',
+'執行長':'你的統籌與推進力，能把各組串成一條線，讓活動一步一步穩穩完成！',
+'副執行長':'你的協調與補位能力，能在關鍵時刻頂上來，讓執行長和各組都沒有後顧之憂！',
+'接待組':'你的親和與細心，能讓貴賓一進門就感到被重視，活動的第一印象就交給你最放心！',
+'節目組':'你的舞台感與節奏感，能讓開幕和午宴都熱鬧順暢，現場氣氛一定會被你帶起來！',
+'競賽組':'你的公平與細心，能讓比賽公正、計分清楚，選手和評審都會很安心！',
+'場地組':'你的動手能力與空間感，能把場地布置得又安全又好看，活動一開始就很有氣勢！',
+'設備組':'你的清點與管理能力，能讓每一樣物資都有去處、有回來，現場絕不手忙腳亂！',
+'環保組':'你的細心與責任感，能讓場地用完恢復乾淨整齊，是最讓人尊敬的幕後守護者！',
+'交通組':'你的冷靜與指揮能力，能讓車流、人流都順順走，大家出入都安全！',
+'活動組':'你的活力與站務能力，能讓健行沿途每個站都熱鬧有序，參加者一路都有人照顧！',
+'醫療組':'你的冷靜與守護，能在需要的時候第一時間站出來，讓所有人都安心參與！',
+'財務組':'你的精準與誠信，能讓每一筆收支都清清楚楚，是活動最穩固的後盾！',
+'餐飲組':'你的細心安排，能讓大家吃得安心、坐得舒服，午宴的幸福感就靠你了！',
+'顧問':'你的經驗與眼光，能在關鍵時刻給出最實在的建議，讓團隊少走很多冤枉路！',
+'副主席':'你的協調與支持，能讓主席和各組之間溝通順暢，是團隊不可或缺的橋梁！',
+'其他':'你的彈性與熱心，哪裡需要就補哪裡，是工作團隊最萬用的魔法夥伴！'
+};
 function zodiac(m,d){
   for(const z of ZODIAC){
     const [fm,fd]=z.from,[tm,td]=z.to;
@@ -120,22 +143,23 @@ document.getElementById('form').addEventListener('submit',async(e)=>{
   const email=document.getElementById('email').value.trim();
   const size=document.getElementById('size').value;
   const diet=document.querySelector('input[name=diet]:checked').value;
+  const group=document.getElementById('group').value;
   const m=parseInt(bm.value),d=parseInt(bd.value);
-  if(!gender||!name||!phone||!email||!size||!m||!d){err.textContent='請把 * 欄位和生日月、日都填好喔。';return;}
+  if(!gender||!name||!phone||!email||!size||!group||!m||!d){err.textContent='請把 * 欄位和生日月、日都填好喔。';return;}
   const z=zodiac(m,d);
   const birthday=(by.value?by.value+'/':'')+String(m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
   const btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='魔法傳送中…';
   let saved='（尚未連接資料庫，請稍後再試一次）';
   try{
     if(!window.APP_API){throw new Error('no api');}
-    const res=await fetch(window.APP_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:window.APP_TOKEN,action:'write',gender,name,phone,email,birthday,zodiac:z.name,size,diet})});
+    const res=await fetch(window.APP_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:window.APP_TOKEN,action:'write',gender,name,phone,email,birthday,zodiac:z.name,size,diet,group})});
     const data=await res.json();
     saved=data.ok?'✅ 已經成功登記，後台看得到你的資料囉！':'⚠️ 送出時遇到問題：'+(data.error||'未知錯誤')+'，請再試一次或聯絡主辦人。';
   }catch(ex){saved='⚠️ 目前無法連到資料庫，請檢查網路後再試一次，魔法卡片先給你看，資料尚未存入。';}
   document.getElementById('step2').classList.add('hidden');
   document.getElementById('resultCard').classList.remove('hidden');
   document.getElementById('resultTitle').textContent='✨ '+name+'，你是'+z.name+'！';
-  document.getElementById('resultBody').innerHTML='親愛的魔法夥伴（'+gender+'），你的星座優點是：<b>'+z.good+'</b>。<br>'+z.msg+'<br><br>衣服尺寸：'+size+'　飲食：'+diet+'<br>謝謝你加入工作團隊，我們活動見！';
+  document.getElementById('resultBody').innerHTML='親愛的魔法夥伴（'+gender+'），你的星座優點是：<b>'+z.good+'</b>。<br>'+z.msg+'<br><br>衣服尺寸：'+size+'　飲食：'+diet+'　組別：'+group+'<br><br>✨ 你在'+group+'可以帶來：'+(GROUP_PRAISE[group]||GROUP_PRAISE['其他'])+'<br><br>謝謝你加入工作團隊，我們活動見！';
   document.getElementById('resultSave').textContent=saved;
   btn.disabled=false;btn.textContent='✨ 送出登記，看看我的星座鼓勵';
 });
