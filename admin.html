@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作人員魔法登記站 後台</title>
+<script src="config.js"></script>
+<style>
+body{margin:0;font-family:"PingFang TC","Microsoft JhengHei",sans-serif;background:#1a1430;color:#fff}
+.wrap{max-width:1100px;margin:0 auto;padding:20px}
+h1{color:#ffd76a}
+.card{background:rgba(255,255,255,.08);border:1px solid rgba(255,215,106,.35);border-radius:16px;padding:18px;margin-top:16px}
+input,select{padding:9px;border-radius:8px;border:1px solid #8b7cc0;background:#1e1740;color:#fff;font-size:14px;box-sizing:border-box}
+button{padding:10px 16px;border-radius:10px;border:0;background:#ffd76a;color:#2b1a00;font-weight:bold;cursor:pointer;margin:4px}
+button.danger{background:#ff7a7a}
+button.secondary{background:transparent;color:#ffd76a;border:1px solid #ffd76a}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th,td{border-bottom:1px solid #444;padding:8px;text-align:left;vertical-align:top}
+.hidden{display:none}
+.small{color:#c9bfff;font-size:13px}
+.editform{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.editform label{color:#ffe9a8;font-size:13px}
+.editform input,.editform select{width:100%}
+@media(max-width:700px){.editform{grid-template-columns:1fr} table{font-size:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🔮 工作人員魔法登記站 後台</h1>
+<p class="small">版本 v1.0（2026-10-30）｜後台連結請勿公開｜首次開啟需自設密碼，本機簡易鎖，不是帳號系統。</p>
+
+<div class="card" id="lockCard">
+<h2>請輸入後台密碼</h2>
+<p class="small" id="lockHint"></p>
+<input id="pw" type="password" placeholder="輸入密碼">
+<button onclick="unlock()">解鎖</button>
+<p class="small">第一次開啟會請你設定一組密碼，之後同一台裝置用同一組密碼解鎖。</p>
+</div>
+
+<div class="card hidden" id="mainCard">
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<button onclick="loadList()">重新載入</button>
+<button class="secondary" onclick="exportCSV()">匯出 CSV</button>
+<span id="meta" class="small"></span>
+</div>
+<div id="list"></div>
+</div>
+</div>
+<script>
+const KEY='staff_magic_admin_pw';
+function setHint(){document.getElementById('lockHint').textContent=localStorage.getItem(KEY)?'請輸入你之前設定的密碼。':'第一次開啟：請設定一組後台密碼。';}
+setHint();
+function unlock(){
+  const v=document.getElementById('pw').value;
+  if(!v){alert('請輸入密碼');return;}
+  const saved=localStorage.getItem(KEY);
+  if(!saved){localStorage.setItem(KEY,v);alert('密碼已設定，之後用這組密碼解鎖。');}
+  else if(saved!==v){alert('密碼不正確');return;}
+  document.getElementById('lockCard').classList.add('hidden');
+  document.getElementById('mainCard').classList.remove('hidden');
+  loadList();
+}
+let rows=[];
+async function api(body){
+  const res=await fetch(window.APP_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({token:window.APP_TOKEN},body))});
+  return await res.json();
+}
+async function loadList(){
+  document.getElementById('list').innerHTML='載入中…';
+  try{
+    const data=await api({action:'read'});
+    if(!data.ok) throw new Error(data.error||'讀取失敗');
+    rows=data.rows||[];
+    document.getElementById('meta').textContent='共 '+rows.length+' 筆　上次載入：'+new Date().toLocaleString('zh-TW');
+    if(!rows.length){document.getElementById('list').innerHTML='<p>目前還沒有登記資料。</p>';return;}
+    let html='<table><tr><th>姓名</th><th>性別</th><th>電話</th><th>Email</th><th>生日／星座</th><th>尺寸／飲食</th><th>填寫時間</th><th>操作</th></tr>';
+    rows.forEach(r=>{
+      html+='<tr><td>'+esc(r.name)+'</td><td>'+esc(r.gender)+'</td><td>'+esc(r.phone)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.birthday)+'<br>'+esc(r.zodiac)+'</td><td>'+esc(r.size)+'／'+esc(r.diet)+'</td><td>'+esc(r.time)+'</td><td><button onclick="editRow('+r.row+')">更改</button> <button class="danger" onclick="delRow('+r.row+')">刪除</button></td></tr>';
+      html+='<tr id="edit-'+r.row+'" class="hidden"><td colspan="8"><div class="editform" data-row="'+r.row+'">'
+      +field('性別','gender',r.gender,['男生','女生'])+field('姓名','name',r.name)+field('電話','phone',r.phone)+field('Email','email',r.email)+field('生日','birthday',r.birthday)+field('星座','zodiac',r.zodiac)+field('衣服尺寸','size',r.size,['S','M','L','XL','2XL','3XL'])+field('飲食習慣','diet',r.diet,['葷食','素食'])
+      +'</div><button onclick="saveRow('+r.row+')">儲存更改</button> <button class="secondary" onclick="cancelEdit('+r.row+')">取消</button></td></tr>';
+    });
+    html+='</table>';
+    document.getElementById('list').innerHTML=html;
+  }catch(e){document.getElementById('list').innerHTML='<p>讀取失敗：'+esc(e.message)+'，請檢查 config.js 的 API 網址後重新載入。</p>';}
+}
+function field(label,key,val,opts){
+  let input;
+  if(opts){input='<select data-k="'+key+'">'+opts.map(o=>'<option'+(o===val?' selected':'')+'>'+o+'</option>').join('')+'</select>';}
+  else{input='<input data-k="'+key+'" value="'+esc(val).replace(/"/g,'&quot;')+'">';}
+  return '<label>'+label+'<br>'+input+'</label>';
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function editRow(row){document.getElementById('edit-'+row).classList.remove('hidden');}
+function cancelEdit(row){document.getElementById('edit-'+row).classList.add('hidden');}
+async function saveRow(row){
+  const box=document.querySelector('.editform[data-row="'+row+'"]');
+  const obj={action:'update',row:row};
+  box.querySelectorAll('[data-k]').forEach(el=>{obj[el.dataset.k]=el.value;});
+  const data=await api(obj);
+  if(data.ok){alert('已儲存');loadList();}else{alert('儲存失敗：'+(data.error||''));}
+}
+async function delRow(row){
+  if(!confirm('確定要刪除這一筆嗎？刪除後無法復原，建議先匯出 CSV 備份。')) return;
+  const data=await api({action:'delete',row:row});
+  if(data.ok){loadList();}else{alert('刪除失敗：'+(data.error||''));}
+}
+function exportCSV(){
+  if(!rows.length){alert('沒有資料可匯出');return;}
+  const cols=[['填寫時間','性別','姓名','電話','Email','生日','星座','衣服尺寸','飲食習慣']];
+  rows.forEach(r=>cols.push([r.time,r.gender,r.name,r.phone,r.email,r.birthday,r.zodiac,r.size,r.diet]));
+  const csv=cols.map(r=>r.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));a.download='staff-magic-register.csv';a.click();
+}
+</script>
+</body>
+</html>

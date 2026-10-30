@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作人員魔法登記站</title>
+<script src="config.js"></script>
+<style>
+body{margin:0;font-family:"PingFang TC","Microsoft JhengHei",sans-serif;background:radial-gradient(circle at 20% 10%,#3b2a6b,#150f2e 60%,#0b0718);color:#fff;min-height:100vh}
+.wrap{max-width:680px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:38px;text-align:center;color:#ffd76a;text-shadow:0 0 18px rgba(255,215,106,.6);margin:8px 0}
+.sub{text-align:center;color:#d9cfff;line-height:1.7}
+.card{background:rgba(255,255,255,.08);border:1px solid rgba(255,215,106,.35);border-radius:20px;padding:22px;margin-top:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+button{width:100%;padding:15px;border-radius:14px;border:0;font-size:18px;cursor:pointer;background:linear-gradient(135deg,#ffd76a,#ff9d5c);color:#2b1a00;font-weight:bold;margin-top:12px}
+button.secondary{background:transparent;color:#ffd76a;border:1px solid #ffd76a}
+.gender{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gender button{font-size:24px;padding:28px 10px}
+label{display:block;margin-top:14px;color:#ffe9a8}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #8b7cc0;background:#1e1740;color:#fff;font-size:16px;box-sizing:border-box;margin-top:6px}
+.radio{display:flex;gap:18px;margin-top:8px}
+.radio label{margin:0;color:#fff}
+.small{font-size:13px;color:#c9bfff;line-height:1.6}
+.hidden{display:none}
+.result{border:2px solid #ffd76a;border-radius:16px;padding:20px;background:rgba(255,215,106,.12)}
+.result h2{color:#ffd76a;margin:0 0 10px}
+.result p{line-height:1.8}
+.err{color:#ff9d9d}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div style="text-align:center;font-size:32px">✨ 🌙 🔮</div>
+<h1>工作人員魔法登記站</h1>
+<p class="sub">歡迎加入工作團隊！<br>先選擇性別，再填寫登記資料，填完魔法會依照你的星座優點，送上一段專屬鼓勵。</p>
+<p class="small">安心提醒：這裡只收登記需要的姓名、電話、Email、生日、衣服尺寸與飲食習慣，絕不收密碼、身分證、銀行帳號或驗證碼。</p>
+
+<div class="card" id="step1">
+<h2>第一步：你是？</h2>
+<div class="gender">
+<button type="button" onclick="pickGender('男生')">♂ 男生</button>
+<button type="button" onclick="pickGender('女生')">♀ 女生</button>
+</div>
+<p class="small">選擇後即可開始填寫，資料只用來安排工作、衣服尺寸與餐食，不會公開。</p>
+</div>
+
+<div class="card hidden" id="step2">
+<h2>第二步：填寫登記資料 <span id="genderLabel"></span></h2>
+<form id="form">
+<label>姓名 *<input id="name" required></label>
+<label>電話 *<input id="phone" inputmode="tel" placeholder="例如 0912-345-678" required></label>
+<label>Email *<input id="email" type="email" required></label>
+<label>生日（年份可不填，月、日用來算星座）</label>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+<select id="byear"><option value="">年份不填</option></select>
+<select id="bmonth" required></select>
+<select id="bday" required></select>
+</div>
+<label>衣服尺寸 *
+<select id="size" required>
+<option value="">請選擇</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option><option>3XL</option>
+</select></label>
+<label>飲食習慣 *</label>
+<div class="radio">
+<label><input type="radio" name="diet" value="葷食" checked> 葷食</label>
+<label><input type="radio" name="diet" value="素食"> 素食</label>
+</div>
+<button type="submit" id="submitBtn">✨ 送出登記，看看我的星座鼓勵</button>
+<button type="button" class="secondary" onclick="backToGender()">← 回上一步重選性別</button>
+<p class="err" id="err"></p>
+</form>
+</div>
+
+<div class="card hidden" id="resultCard">
+<div class="result">
+<h2 id="resultTitle"></h2>
+<p id="resultBody"></p>
+<p id="resultSave"></p>
+</div>
+<button type="button" class="secondary" onclick="location.reload()">再登記一位工作人員</button>
+</div>
+</div>
+<script>
+let gender='';
+const ZODIAC=[
+ {name:'牡羊座',from:[3,21],to:[4,19],good:'勇敢果斷、行動力強、熱情有感染力',msg:'現場最需要你這種一喊就動、帶著大家往前衝的能量，有你在，開場一定熱起來！'},
+ {name:'金牛座',from:[4,20],to:[5,20],good:'耐心細心、可靠穩定、務實負責',msg:'你穩穩的、做事不馬虎，是工作團隊最安心的後盾，交給你的事一定會做到好！'},
+ {name:'雙子座',from:[5,21],to:[6,20],good:'靈活溝通、反應快、很會帶動氣氛',msg:'你一句話就能讓現場輕鬆起來，接待、引導、串場有你，氣氛一定不冷場！'},
+ {name:'巨蟹座',from:[6,21],to:[7,22],good:'溫暖體貼、很會照顧人、觀察細膩',msg:'你總是先看到別人的需要，這份溫柔正是工作團隊最珍貴的魔法，謝謝你來照顧大家！'},
+ {name:'獅子座',from:[7,23],to:[8,22],good:'自信大方、領導魅力、很會鼓舞士氣',msg:'你一站出來就有光，帶隊、主持、鼓舞士氣都少不了你，有你加入，團隊更有信心！'},
+ {name:'處女座',from:[8,23],to:[9,22],good:'細心周到、條理清楚、品質把關',msg:'你看得細、想得周到，流程、物資、細節交給你最放心，活動一定會順順利利！'},
+ {name:'天秤座',from:[9,23],to:[10,22],good:'公平協調、親和力強、美感好',msg:'你讓不同的人都能好好合作，現場協調、接待、布置有你，整個活動會更和諧好看！'},
+ {name:'天蠍座',from:[10,23],to:[11,21],good:'專注堅持、觀察敏銳、使命感強',msg:'你認定的事一定堅持到底，這份專注就是活動成功的關鍵，謝謝你願意全力投入！'},
+ {name:'射手座',from:[11,22],to:[12,21],good:'樂觀開朗、行動積極、帶來希望',msg:'你的樂觀會傳染給所有人，健行路上、舞台前後，有你就有笑聲和希望！'},
+ {name:'摩羯座',from:[12,22],to:[1,19],good:'責任感強、穩重可靠、堅持到底',msg:'你是最讓人依靠的夥伴，交辦的事一定負責到底，有你在，團隊就穩了！'},
+ {name:'水瓶座',from:[1,20],to:[2,18],good:'創意靈活、獨立思考、樂於助人',msg:'你的創意總能帶來新點子，遇到突發狀況你也能想出好辦法，團隊有你真幸運！'},
+ {name:'雙魚座',from:[2,19],to:[3,20],good:'同理心強、溫柔包容、直覺細膩',msg:'你能感受到別人的心情，這份溫柔會讓每一位參加者都覺得被好好對待，謝謝你！'}
+];
+function zodiac(m,d){
+  for(const z of ZODIAC){
+    const [fm,fd]=z.from,[tm,td]=z.to;
+    if(fm<tm){ if((m===fm&&d>=fd)||(m===tm&&d<=td)||(m>fm&&m<tm)) return z; }
+    else { if((m===fm&&d>=fd)||(m===tm&&d<=td)||(m>fm)||(m<tm)) return z; }
+  }
+  return ZODIAC[0];
+}
+const by=document.getElementById('byear'),bm=document.getElementById('bmonth'),bd=document.getElementById('bday');
+for(let y=2026;y>=1930;y--){const o=document.createElement('option');o.value=y;o.textContent=y+' 年';by.appendChild(o);}
+for(let m=1;m<=12;m++){const o=document.createElement('option');o.value=m;o.textContent=m+' 月';bm.appendChild(o);}
+for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=d;o.textContent=d+' 日';bd.appendChild(o);}
+bm.value='';bd.value='';
+function pickGender(g){gender=g;document.getElementById('step1').classList.add('hidden');document.getElementById('step2').classList.remove('hidden');document.getElementById('genderLabel').textContent='（'+g+'）';}
+function backToGender(){document.getElementById('step2').classList.add('hidden');document.getElementById('step1').classList.remove('hidden');}
+document.getElementById('form').addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const err=document.getElementById('err');err.textContent='';
+  const name=document.getElementById('name').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const size=document.getElementById('size').value;
+  const diet=document.querySelector('input[name=diet]:checked').value;
+  const m=parseInt(bm.value),d=parseInt(bd.value);
+  if(!gender||!name||!phone||!email||!size||!m||!d){err.textContent='請把 * 欄位和生日月、日都填好喔。';return;}
+  const z=zodiac(m,d);
+  const birthday=(by.value?by.value+'/':'')+String(m).padStart(2,'0')+'/'+String(d).padStart(2,'0');
+  const btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='魔法傳送中…';
+  let saved='（尚未連接資料庫，請稍後再試一次）';
+  try{
+    if(!window.APP_API){throw new Error('no api');}
+    const res=await fetch(window.APP_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:window.APP_TOKEN,action:'write',gender,name,phone,email,birthday,zodiac:z.name,size,diet})});
+    const data=await res.json();
+    saved=data.ok?'✅ 已經成功登記，後台看得到你的資料囉！':'⚠️ 送出時遇到問題：'+(data.error||'未知錯誤')+'，請再試一次或聯絡主辦人。';
+  }catch(ex){saved='⚠️ 目前無法連到資料庫，請檢查網路後再試一次，魔法卡片先給你看，資料尚未存入。';}
+  document.getElementById('step2').classList.add('hidden');
+  document.getElementById('resultCard').classList.remove('hidden');
+  document.getElementById('resultTitle').textContent='✨ '+name+'，你是'+z.name+'！';
+  document.getElementById('resultBody').innerHTML='親愛的魔法夥伴（'+gender+'），你的星座優點是：<b>'+z.good+'</b>。<br>'+z.msg+'<br><br>衣服尺寸：'+size+'　飲食：'+diet+'<br>謝謝你加入工作團隊，我們活動見！';
+  document.getElementById('resultSave').textContent=saved;
+  btn.disabled=false;btn.textContent='✨ 送出登記，看看我的星座鼓勵';
+});
+</script>
+</body>
+</html>
