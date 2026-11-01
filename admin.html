@@ -34,6 +34,7 @@ th,td{border-bottom:1px solid #444;padding:8px;text-align:left;vertical-align:to
 <p class="small" id="lockHint"></p>
 <input id="pw" type="password" placeholder="輸入密碼">
 <button onclick="unlock()">解鎖</button>
+<button class="secondary" onclick="resetPw()">忘記密碼，重新設定</button>
 <p class="small">第一次開啟會請你設定一組密碼，之後同一台裝置用同一組密碼解鎖。</p>
 </div>
 
@@ -50,6 +51,11 @@ th,td{border-bottom:1px solid #444;padding:8px;text-align:left;vertical-align:to
 const KEY='staff_magic_admin_pw';
 function setHint(){document.getElementById('lockHint').textContent=localStorage.getItem(KEY)?'請輸入你之前設定的密碼。':'第一次開啟：請設定一組後台密碼。';}
 setHint();
+function resetPw(){
+  if(!confirm('確定要清除這台裝置上存的後台密碼嗎？清除後下次開啟會請你重新設定一組新密碼，試算表裡的登記資料不會被動到。')) return;
+  localStorage.removeItem(KEY);
+  location.reload();
+}
 function unlock(){
   const v=document.getElementById('pw').value;
   if(!v){alert('請輸入密碼');return;}
